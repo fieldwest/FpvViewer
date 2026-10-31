@@ -2,7 +2,7 @@
 
 このドキュメントは、Raspberry Pi 3B+ を FPVView（Android）向けの **FPV送信機** として構築するための手順をまとめたものです。  
 NetworkManager による AP 化、MAC ベースの SSID 自動生成、DHCP 検知による自動ストリーミング開始までを自動化します。
-
+Raspberry Pi 3B+ のOSは、Raspberry Pi OS Liteの64-bitです。
 ---
 
 ## 📦 1. GStreamer（送信コマンド）インストール
