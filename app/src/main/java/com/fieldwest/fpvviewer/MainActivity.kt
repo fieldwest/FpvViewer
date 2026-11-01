@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     private var frameTimestamp = 0L
     private val frameDurationUs = 1_000_000L / 60 // 60fps想定
+    private val startCode = byteArrayOf(0, 0, 0, 1)
 
     // ------------------------------------------------------------
     // 計測用(受信スレッドだけが更新する)
@@ -242,7 +243,7 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
                     val inputBuffer = c.getInputBuffer(inIndex)
                     inputBuffer?.clear()
                     // スタートコード(0x00000001)を付けて投入
-                    inputBuffer?.put(byteArrayOf(0, 0, 0, 1))
+                    inputBuffer?.put(startCode)
                     inputBuffer?.put(src, 0, len)
                     c.queueInputBuffer(inIndex, 0, (len + 4), frameTimestamp, 0)
                     frameTimestamp += frameDurationUs
@@ -387,7 +388,9 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
             if (gapMs > maxFrameGapMs) maxFrameGapMs = gapMs
             if (gapMs > STALL_MS) {
                 stallCount++
-                logStall(gapMs, now)
+                if (logOn) {
+                    logStall(gapMs, now)
+                }
             }
         }
         lastFrameNs = now
@@ -406,6 +409,7 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     //  pkts  : 固まっている間に届いたパケット数(多いのにフレームが出ない→IDR待ちなど)
     //  nals  : 同じくNAL数、idr : そのうちIDRの数、inDrop : デコーダ入力が詰まって捨てた数
     private fun logStall(gapMs: Double, nowNs: Long) {
+        if (!logOn) return
         val up = (nowNs - startNs) / 1e9
         val rssiText = if (lastRssi == Int.MIN_VALUE) "NA" else lastRssi.toString()
         val line = String.format(
@@ -496,26 +500,27 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
         winStartMs = nowMs
 
         val hudVisible = debugText.visibility == View.VISIBLE
+        if (!hudVisible) return
+
         runOnUiThread {
+            if (debugText.visibility != View.VISIBLE) return@runOnUiThread
             val rssi = getWifiRssi()
             lastRssi = rssi
-            if (hudVisible) {
-                val rssiText = if (rssi == Int.MIN_VALUE) "N/A" else "$rssi dBm"
-                updateDebugHud(
-                    """
-                        SSID: ${currentSsid()}
-                        CH: ${channelText()}  RSSI: $rssiText
-                        IP: ${getLocalIp()}
-                        FPS: ${"%.1f".format(fps)}  GapMax: ${"%.0f".format(gapMax)}ms
-                        Bitrate: ${"%.2f".format(br)} Mbps
-                        NAL/s  I:$i P:$p S:$sps PP:$pps
-                        DROP: $drop  INDROP: $inDrop
-                        Wait: ${"%.0f".format(waitMax)}ms  Feed: ${"%.0f".format(feedMax)}ms
-                        Stalls: $stalls  Up: ${upSec / 60}:${"%02d".format(upSec % 60)}
-                        NAL: ${nalTypeToString(lastNalType)}  Log: ${if (logOn) "ON" else "OFF"}
-                        """.trimIndent()
-                )
-            }
+            val rssiText = if (rssi == Int.MIN_VALUE) "N/A" else "$rssi dBm"
+            updateDebugHud(
+                """
+                    SSID: ${currentSsid()}
+                    CH: ${channelText()}  RSSI: $rssiText
+                    IP: ${getLocalIp()}
+                    FPS: ${"%.1f".format(fps)}  GapMax: ${"%.0f".format(gapMax)}ms
+                    Bitrate: ${"%.2f".format(br)} Mbps
+                    NAL/s  I:$i P:$p S:$sps PP:$pps
+                    DROP: $drop  INDROP: $inDrop
+                    Wait: ${"%.0f".format(waitMax)}ms  Feed: ${"%.0f".format(feedMax)}ms
+                    Stalls: $stalls  Up: ${upSec / 60}:${"%02d".format(upSec % 60)}
+                    NAL: ${nalTypeToString(lastNalType)}  Log: ${if (logOn) "ON" else "OFF"}
+                    """.trimIndent()
+            )
         }
     }
 
