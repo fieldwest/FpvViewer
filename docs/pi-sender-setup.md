@@ -195,6 +195,40 @@ sudo systemctl enable fpv-stream.service
 ```
 ---
 
+## ⚡ 6. システム軽量化・不要サービス停止（低遅延・起動高速化）
+
+FPV 送信機専用機として、CPU・メモリ・2.4GHz Wi-Fi 帯域を映像配信に集中させるため、不要な常駐サービスを停止（disable）します。  
+いつでも `sudo systemctl enable --now <サービス名>` で元に戻せる安全な設定です。
+
+### 停止コマンド（一括実行）
+```bash
+# 1. 2.4GHz Wi-Fiの電波干渉・ジッター防止（Bluetooth停止）
+sudo systemctl disable --now bluetooth.service 2>/dev/null
+
+# 2. 起動高速化（ネット接続待機時間をカット）
+sudo systemctl disable --now NetworkManager-wait-online.service
+
+# 3. 余計な通信・時刻同期の停止（オフラインAP運用時のリトライ負荷防止）
+sudo systemctl disable --now avahi-daemon.service avahi-daemon.socket
+sudo systemctl disable --now systemd-timesyncd.service
+
+# 4. 走行中の突発的なCPU・I/Oスパイク防止（定期処理停止）
+sudo systemctl disable --now cron.service
+sudo systemctl disable --now apt-daily.timer apt-daily-upgrade.timer
+```
+
+### 停止状態の確認
+```bash
+systemctl is-active bluetooth NetworkManager-wait-online avahi-daemon systemd-timesyncd cron apt-daily.timer
+```
+※すべて `inactive` と表示されれば完了です。
+
+> **Note (Debian 12 Bookworm Lite 環境での補足)**  
+> 以下のサービスは Bookworm Lite では標準で未配備・廃止済みのため、停止操作時に `not found`（存在しない）となっても正常です。  
+> - `hciuart.service` / `ModemManager.service` / `triggerhappy.service` / `rsyslog.service`
+
+---
+
 ## その他（メンテナンス用インターネットWiFi接続）
 必要があれば、Pi3B+のメンテナンス用にインターネットWiFi接続必要です
 
