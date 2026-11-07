@@ -257,10 +257,19 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
                 val bufferInfo = MediaCodec.BufferInfo()
                 var outIndex = c.dequeueOutputBuffer(bufferInfo, 0)
+                // 複数フレーム溜まっている場合は、最新の直前までを画面更新なしで捨て、一番新しいものだけ描画する
                 while (outIndex >= 0) {
-                    onFrameOut()
-                    c.releaseOutputBuffer(outIndex, true)
-                    outIndex = c.dequeueOutputBuffer(bufferInfo, 0)
+                    val nextOutIndex = c.dequeueOutputBuffer(bufferInfo, 0)
+                    if (nextOutIndex < 0) {
+                        // これが最新のフレーム
+                        onFrameOut()
+                        c.releaseOutputBuffer(outIndex, true)
+                        break
+                    } else {
+                        // 古いフレームは描画をスキップして即座にリリース
+                        c.releaseOutputBuffer(outIndex, false)
+                        outIndex = nextOutIndex
+                    }
                 }
             }
 
